@@ -19,45 +19,141 @@ function getUrlParameter(name) {
 
 // XSS önleme için HTML kaçırma (escaping) yardımcı fonksiyonu
 function escapeHTML(str) {
+    if (typeof str !== 'string') { // Gelen değerin string olup olmadığını kontrol et
+        if (str === null || str === undefined) {
+            return ''; // Null veya undefined ise boş string döndür
+        }
+        str = String(str); // Değilse string'e çevir
+    }
     var div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
     return div.innerHTML;
 }
 
-
 let allData = [];
 let currentPlayingVideoElement = null;
 
-// Hardcoded Sure Ayet Sayıları (adjusted for common Turkish spellings without special diacritics)
-const sureAyetSayilari = {
-    "Fatiha": 7, "Bakara": 286, "Ali İmran": 200, "Nisa": 176, "Maide": 120,
-    "En'am": 165, "A'raf": 206, "Enfal": 75, "Tevbe": 129, "Yunus": 109,
-    "Hud": 123, "Yusuf": 111, "Ra'd": 43, "Ibrahim": 52, "Hicr": 99,
-    "Nahl": 128, "Isra": 111, "Kehf": 110, "Meryem": 98, "Taha": 135,
-    "Enbiya": 112, "Hac": 78, "Mu'minun": 118, "Nur": 64, "Furkan": 77,
-    "Suara": 227, "Neml": 93, "Kasas": 88, "Ankebut": 69, "Rum": 60,
-    "Lokman": 34, "Secde": 30, "Ahzab": 73, "Sebe": 54, "Fatir": 45,
-    "Yasin": 83, "Saffat": 182, "Sad": 88, "Zumer": 75, "Mu'min": 85,
-    "Fussilet": 54, "Sura": 53, "Zuhruf": 89, "Duhan": 59, "Casiye": 37,
-    "Ahkaf": 35, "Muhammed": 38, "Fetih": 29, "Hucurat": 18, "Kaf": 45,
-    "Zariyat": 60, "Tur": 49, "Necm": 62, "Kamer": 55, "Rahman": 78,
-    "Vakia": 96, "Hadid": 29, "Mucadele": 22, "Hasr": 24, "Mumtehine": 13,
-    "Saff": 14, "Cum'a": 11, "Munafikun": 11, "Tegabun": 18, "Talak": 12,
-    "Tahrim": 12, "Mulk": 30, "Kalem": 52, "Hakka": 52, "Mearic": 44,
-    "Nuh": 28, "Cinn": 28, "Muzzemmil": 20, "Muddessir": 56, "Kiyamet": 40,
-    "Insan": 31, "Murselat": 50, "Nebe": 40, "Naziat": 46, "Abese": 42,
-    "Tekvir": 29, "Infitar": 19, "Mutaffifin": 36, "Insikak": 25, "Buruc": 22,
-    "Tarik": 17, "Ala": 19, "Gasiye": 26, "Fecr": 30, "Beled": 20,
-    "Sems": 15, "Leyl": 21, "Duha": 11, "Insirah": 8, "Tin": 8,
-    "Alak": 19, "Kadr": 5, "Beyyine": 8, "Zilzal": 8, "Adiyat": 11,
-    "Kari'a": 11, "Tekasur": 8, "Asr": 3, "Humeze": 9, "Fil": 5,
-    "Kureys": 4, "Ma'un": 7, "Kevser": 3, "Kafirun": 6, "Nasr": 3,
-    "Tebbet": 5, "Ikhlas": 4, "Felak": 5, "Nas": 6
+// Hardcoded Sure Metadata (ayet_sayisi, Arabic name, Turkish meaning)
+const sureMetadata = {
+    "Fatiha": { ayet: 7, arabic: "الفاتحة", meaning: "Açılış" },
+    "Bakara": { ayet: 286, arabic: "البقرة", meaning: "İnek" },
+    "Ali İmran": { ayet: 200, arabic: "آل عمران", meaning: "İmran Ailesi" },
+    "Nisa": { ayet: 176, arabic: "النساء", meaning: "Kadınlar" },
+    "Maide": { ayet: 120, arabic: "المائدة", meaning: "Sofra" },
+    "En'am": { ayet: 165, arabic: "الأنعام", meaning: "En'am (Hayvanlar)" },
+    "A'raf": { ayet: 206, arabic: "الأعراف", meaning: "A'raf (Surlar)" },
+    "Enfal": { ayet: 75, arabic: "الأنفال", meaning: "Ganimetler" },
+    "Tevbe": { ayet: 129, arabic: "التوبة", meaning: "Tevbe (Tövbe)" },
+    "Yunus": { ayet: 109, arabic: "يونس", meaning: "Yunus" },
+    "Hud": { ayet: 123, arabic: "هود", meaning: "Hud" },
+    "Yusuf": { ayet: 111, arabic: "يوسف", meaning: "Yusuf" },
+    "Ra'd": { ayet: 43, arabic: "الرعد", meaning: "Gök Gürültüsü" },
+    "Ibrahim": { ayet: 52, arabic: "إبراهيم", meaning: "İbrahim" },
+    "Hicr": { ayet: 99, arabic: "الحجر", meaning: "Hicr (Taşlı Bölge)" },
+    "Nahl": { ayet: 128, arabic: "النحل", meaning: "Arı" },
+    "Isra": { ayet: 111, arabic: "الإسراء", meaning: "İsra (Gece Yürüyüşü)" },
+    "Kehf": { ayet: 110, arabic: "الكهف", meaning: "Kehf (Mağara)" },
+    "Meryem": { ayet: 98, arabic: "مريم", meaning: "Meryem" },
+    "Taha": { ayet: 135, arabic: "طه", meaning: "Ta-Ha" },
+    "Enbiya": { ayet: 112, arabic: "الأنبياء", meaning: "Peygamberler" },
+    "Hac": { ayet: 78, arabic: "الحج", meaning: "Hac" },
+    "Mu'minun": { ayet: 118, arabic: "المؤمنون", meaning: "Mü'minler" },
+    "Nur": { ayet: 64, arabic: "النور", meaning: "Nur (Işık)" },
+    "Furkan": { ayet: 77, arabic: "الفرقان", meaning: "Furkan (İyi ile Kötüyü Ayıran)" },
+    "Suara": { ayet: 227, arabic: "الشعراء", meaning: "Şuara (Şairler)" },
+    "Neml": { ayet: 93, arabic: "النمل", meaning: "Neml (Karınca)" },
+    "Kasas": { ayet: 88, arabic: "القصص", meaning: "Kasas (Kıssalar)" },
+    "Ankebut": { ayet: 69, arabic: "العنكبوت", meaning: "Ankebut (Örümcek)" },
+    "Rum": { ayet: 60, arabic: "الروم", meaning: "Rum (Bizanslılar)" },
+    "Lokman": { ayet: 34, arabic: "لقمان", meaning: "Lokman" },
+    "Secde": { ayet: 30, arabic: "السجدة", meaning: "Secde" },
+    "Ahzab": { ayet: 73, arabic: "الأحزاب", meaning: "Ahzab (Birleşik Kuvvetler)" },
+    "Sebe": { ayet: 54, arabic: "سبأ", meaning: "Sebe" },
+    "Fatir": { ayet: 45, arabic: "فاطر", meaning: "Fatır (Yaratıcı)" },
+    "Yasin": { ayet: 83, arabic: "يس", meaning: "Ya-Sin" },
+    "Saffat": { ayet: 182, arabic: "الصافات", meaning: "Saffat (Saf Saf Duranlar)" },
+    "Sad": { ayet: 88, arabic: "ص", meaning: "Sad" },
+    "Zumer": { ayet: 75, arabic: "الزمر", meaning: "Zümer (Gruplar)" },
+    "Mu'min": { ayet: 85, arabic: "غافر", meaning: "Mü'min (İnanan)" }, // Gafir olarak da bilinir
+    "Fussilet": { ayet: 54, arabic: "فصلت", meaning: "Fussilet (Açıkça Anlatılmış)" },
+    "Sura": { ayet: 53, arabic: "الشورى", meaning: "Şura (Danışma)" },
+    "Zuhruf": { ayet: 89, arabic: "الزخرف", meaning: "Zuhruf (Altın Süsler)" },
+    "Duhan": { ayet: 59, arabic: "الدخان", meaning: "Duhan (Duman)" },
+    "Casiye": { ayet: 37, arabic: "الجاثية", meaning: "Casiye (Diz Çöken)" },
+    "Ahkaf": { ayet: 35, arabic: "الأحقاف", meaning: "Ahkaf (Kum Tepeleri)" },
+    "Muhammed": { ayet: 38, arabic: "محمد", meaning: "Muhammed" },
+    "Fetih": { ayet: 29, arabic: "الفتح", meaning: "Fetih (Zafer)" },
+    "Hucurat": { ayet: 18, arabic: "الحجرات", meaning: "Hucurat (Odalar)" },
+    "Kaf": { ayet: 45, arabic: "ق", meaning: "Kaf" },
+    "Zariyat": { ayet: 60, arabic: "الذاريات", meaning: "Zariyat (Tozutanlar)" },
+    "Tur": { ayet: 49, arabic: "الطور", meaning: "Tur (Dağ)" },
+    "Necm": { ayet: 62, arabic: "النجم", meaning: "Necm (Yıldız)" },
+    "Kamer": { ayet: 55, arabic: "القمر", meaning: "Kamer (Ay)" },
+    "Rahman": { ayet: 78, arabic: "الرحمن", meaning: "Rahman (Rahmet Eden)" },
+    "Vakia": { ayet: 96, arabic: "الواقعة", meaning: "Vakıa (Kıyamet)" },
+    "Hadid": { ayet: 29, arabic: "الحديد", meaning: "Hadid (Demir)" },
+    "Mucadele": { ayet: 22, arabic: "المجادلة", meaning: "Mücadele (Münakaşa)" },
+    "Hasr": { ayet: 24, arabic: "الحشر", meaning: "Haşr (Toplanma)" },
+    "Mumtehine": { ayet: 13, arabic: "الممتحنة", meaning: "Mümtehine (İmtihan Edilen Kadın)" },
+    "Saff": { ayet: 14, arabic: "الصف", meaning: "Saff (Sıra)" },
+    "Cum'a": { ayet: 11, arabic: "الجمعة", meaning: "Cuma" },
+    "Munafikun": { ayet: 11, arabic: "المنافقون", meaning: "Münafikun (Münafıklar)" },
+    "Tegabun": { ayet: 18, arabic: "التغابن", meaning: "Teğabun (Aldanma)" },
+    "Talak": { ayet: 12, arabic: "الطلاق", meaning: "Talak (Boşanma)" },
+    "Tahrim": { ayet: 12, arabic: "التحريم", meaning: "Tahrim (Haram Kılma)" },
+    "Mulk": { ayet: 30, arabic: "الملك", meaning: "Mülk (Egemenlik)" },
+    "Kalem": { ayet: 52, arabic: "القلم", meaning: "Kalem" },
+    "Hakka": { ayet: 52, arabic: "الحاقة", meaning: "Hakka (Gerçek)" },
+    "Mearic": { ayet: 44, arabic: "المعارج", meaning: "Mearic (Yükselme Dereceleri)" },
+    "Nuh": { ayet: 28, arabic: "نوح", meaning: "Nuh" },
+    "Cinn": { ayet: 28, arabic: "الجن", meaning: "Cinn (Cinler)" },
+    "Muzzemmil": { ayet: 20, arabic: "المزمل", meaning: "Müzzemmil (Örtünüp Bürünen)" },
+    "Muddessir": { ayet: 56, arabic: "المدثر", meaning: "Bürünüp Sarınan" },
+    "Kiyamet": { ayet: 40, arabic: "القيامة", meaning: "Kıyamet" },
+    "Insan": { ayet: 31, arabic: "الإنسان", meaning: "İnsan" },
+    "Murselat": { ayet: 50, arabic: "المرسلات", meaning: "Mürselat (Gönderilenler)" },
+    "Nebe": { ayet: 40, arabic: "النبأ", meaning: "Nebe (Haber)" },
+    "Naziat": { ayet: 46, arabic: "النازعات", meaning: "Naziat (Söküp Alanlar)" },
+    "Abese": { ayet: 42, arabic: "عبس", meaning: "Abese (Yüz Ekşitti)" },
+    "Tekvir": { ayet: 29, arabic: "التكوير", meaning: "Tekvir (Dürüp Bükme)" },
+    "Infitar": { ayet: 19, arabic: "الإنفطار", meaning: "Yarılma" },
+    "Mutaffifin": { ayet: 36, arabic: "المطففين", meaning: "Ölçüde ve Tartıda Hile Yapanlar" },
+    "Insikak": { ayet: 25, arabic: "الإنشقاق", meaning: "Yarılma" },
+    "Buruc": { ayet: 22, arabic: "البروج", meaning: "Burçlar" },
+    "Tarik": { ayet: 17, arabic: "الطارق", meaning: "Gece Gelen" },
+    "Ala": { ayet: 19, arabic: "الأعلى", meaning: "En Yüce" },
+    "Gasiye": { ayet: 26, arabic: "الغاشية", meaning: "Her Şeyi Kaplayan" },
+    "Fecr": { ayet: 30, arabic: "الفجر", meaning: "Şafak" },
+    "Beled": { ayet: 20, arabic: "البلد", meaning: "Şehir" },
+    "Sems": { ayet: 15, arabic: "الشمس", meaning: "Güneş" },
+    "Leyl": { ayet: 21, arabic: "الليل", meaning: "Gece" },
+    "Duha": { ayet: 11, arabic: "الضحى", meaning: "Kuşluk Vakti" },
+    "Insirah": { ayet: 8, arabic: "الشرح", meaning: "Ferahlama" }, // Şerh olarak da bilinir
+    "Tin": { ayet: 8, arabic: "التين", meaning: "İncir" },
+    "Alak": { ayet: 19, arabic: "العلق", meaning: "Kan Pıhtısı" },
+    "Kadr": { ayet: 5, arabic: "القدر", meaning: "Kadir Gecesi" },
+    "Beyyine": { ayet: 8, arabic: "البينة", meaning: "Apaçık Delil" },
+    "Zilzal": { ayet: 8, arabic: "الزلزلة", meaning: "Deprem" },
+    "Adiyat": { ayet: 11, arabic: "العاديات", meaning: "Koşan Atlar" },
+    "Kari'a": { ayet: 11, arabic: "القارعة", meaning: "Kapı Çalan Kıyamet" },
+    "Tekasur": { ayet: 8, arabic: "التكاثر", meaning: "Çoğalma Yarışı" },
+    "Asr": { ayet: 3, arabic: "العصر", meaning: "İkindi Vakti" },
+    "Humeze": { ayet: 9, arabic: "الهمزة", meaning: "Kusur Arayan" },
+    "Fil": { ayet: 5, arabic: "الفيل", meaning: "Fil" },
+    "Kureys": { ayet: 4, arabic: "قريش", meaning: "Kureyş" },
+    "Ma'un": { ayet: 7, arabic: "الماعون", meaning: "Yardım" },
+    "Kevser": { ayet: 3, arabic: "الكوثر", meaning: "Kevser (Cennette Bir Nehir)" },
+    "Kafirun": { ayet: 6, arabic: "الكافرون", meaning: "Kafirler" },
+    "Nasr": { ayet: 3, arabic: "النصر", meaning: "Yardım" },
+    "Tebbet": { ayet: 5, arabic: "المسد", meaning: "Kurusun (Leheb)" }, // Mesed olarak da bilinir
+    "Ikhlas": { ayet: 4, arabic: "الإخلاص", meaning: "Samimiyet (İhlas)" },
+    "Felak": { ayet: 5, arabic: "الفلق", meaning: "Sabahın Aydınlığı" },
+    "Nas": { ayet: 6, arabic: "الناس", meaning: "İnsanlar" }
 };
 
 
 // Helper objects for pre-processed data
-let sureInfo = {}; // Stores ayet_sayisi, mufessir_count, total_video_count for each sure
+let sureInfo = {}; // Stores ayet_sayisi, mufessir_count, total_video_count, arabic_name, meaning_tr for each sure
 let mufessirSureVideoCounts = {}; // Stores video count for each mufessir per sure
 
 // Function to pre-process data for counts and info
@@ -68,15 +164,19 @@ function preprocessData() {
     allData.forEach(item => {
         const sureAd = item.standart_sure_ad;
         const mufessirAd = item.mufessir;
-        // Get ayetSayisi from the hardcoded object
-        const ayetSayisi = sureAyetSayilari[sureAd] || 'Bilinmiyor';
+        const sureMeta = sureMetadata[sureAd];
+        const ayetSayisi = sureMeta ? sureMeta.ayet : 'Bilinmiyor';
+        const arabicName = sureMeta ? sureMeta.arabic : 'Bilinmiyor';
+        const meaningTr = sureMeta ? sureMeta.meaning : 'Bilinmiyor';
 
         // Populate sureInfo
         if (!sureInfo[sureAd]) {
             sureInfo[sureAd] = {
-                ayet_sayisi: ayetSayisi, // Use hardcoded ayet_sayisi
+                ayet_sayisi: ayetSayisi,
                 mufessirs: new Set(),
-                total_videos: 0
+                total_videos: 0,
+                arabic_name: arabicName,
+                meaning_tr: meaningTr
             };
         }
         sureInfo[sureAd].mufessirs.add(mufessirAd);
@@ -99,28 +199,47 @@ function preprocessData() {
     }
 }
 
-
 // Sayfa yüklendiğinde çalışacak ana fonksiyon
 document.addEventListener('DOMContentLoaded', async () => {
     // PapaParse kütüphanesini dinamik olarak yükle
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js';
-    document.head.appendChild(script);
+    const scriptTag = document.createElement('script');
+    scriptTag.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js';
+    document.head.appendChild(scriptTag);
 
-    script.onload = async () => {
-        allData = await loadCSV('data.csv');
-        console.log("CSV verisi yüklendi:", allData);
-        preprocessData(); // Pre-process data once loaded
+    scriptTag.onload = async () => {
+        try {
+            allData = await loadCSV('data.csv');
+            console.log("CSV verisi yüklendi:", allData);
+            if (!allData || allData.length === 0) {
+                console.error("CSV verisi yüklenemedi veya boş.");
+                // Kullanıcıya bilgi verilebilir.
+                return;
+            }
+            preprocessData(); // Pre-process data once loaded
 
-        if (document.getElementById('sureler-grid')) {
-            renderSurelerPage();
-        } else if (document.getElementById('mufessirler-grid')) {
-            renderMufessirlerPage();
-        } else if (document.getElementById('default-sureler-grid')) {
-            renderDefaultHomePage();
+            if (document.getElementById('sureler-grid')) {
+                renderSurelerPage();
+            } else if (document.getElementById('mufessirler-grid')) {
+                renderMufessirlerPage();
+            } else if (document.getElementById('default-sureler-grid')) {
+                renderDefaultHomePage();
+                 // Ana sayfada varsayılan olarak Sureler sekmesinin aktif olması için
+                const showSurelerButton = document.getElementById('show-sureler');
+                if (showSurelerButton) {
+                    showSurelerButton.click();
+                }
+            }
+        } catch (error) {
+            console.error("Veri yükleme veya işleme hatası:", error);
+            // Kullanıcıya genel bir hata mesajı gösterilebilir.
         }
     };
+    scriptTag.onerror = () => {
+        console.error("PapaParse kütüphanesi yüklenemedi.");
+        // Kullanıcıya bilgi verilebilir.
+    };
 });
+
 
 // Sureler sayfasını render etme fonksiyonu
 function renderSurelerPage() {
@@ -128,6 +247,11 @@ function renderSurelerPage() {
     const mufessirGridForSure = document.getElementById('mufessir-grid-for-sure');
     const videoDetayDiv = document.getElementById('video-detay');
     const pageTitle = document.getElementById('page-title');
+
+    if (!surelerGrid || !mufessirGridForSure || !videoDetayDiv || !pageTitle) {
+        console.error("Sureler sayfası için gerekli HTML elementleri bulunamadı.");
+        return;
+    }
 
     const sureler = [];
     allData.forEach(item => {
@@ -143,10 +267,9 @@ function renderSurelerPage() {
 
     if (selectedSure) {
         if (selectedMufessirFromUrl) {
-            // Zafiyetli kısım düzeltildi
             pageTitle.innerHTML = `${escapeHTML(selectedSure)} Suresi - <a href="mufessirler.html?mufessir=${encodeURIComponent(selectedMufessirFromUrl)}">${escapeHTML(selectedMufessirFromUrl)}</a> Tefsirleri`;
         } else {
-            pageTitle.textContent = `${selectedSure} Suresi`;
+            pageTitle.textContent = `${escapeHTML(selectedSure)} Suresi`;
         }
         
         surelerGrid.classList.add('hidden');
@@ -176,7 +299,7 @@ function renderSurelerPage() {
                 <img src="${escapeHTML(mufessirData.thumbnail)}" alt="${escapeHTML(mufessirData.mufessir)} thumbnail" class="mufessir-thumbnail">
                 <div class="mufessir-card-info">
                     <h3>${escapeHTML(mufessirData.mufessir)}</h3>
-                    <p>Video Sayısı: ${videoCount}</p>
+                    <p>Video Sayısı: ${escapeHTML(videoCount)}</p>
                 </div>
             `;
             card.addEventListener('click', () => {
@@ -199,21 +322,31 @@ function renderSurelerPage() {
 
         surelerGrid.innerHTML = '';
         sureler.forEach(sure => {
-            // Ayet sayısı artık hardcoded sureAyetSayilari objesinden geliyor
-            const currentSureInfo = sureInfo[sure.sure_ad] || { ayet_sayisi: 'Bilinmiyor', mufessir_count: 0, total_videos: 0 };
-            const card = document.createElement('div');
-            card.classList.add('card');
-            card.innerHTML = `
-                <h3>${escapeHTML(sure.sure_ad)}</h3>
-                <p>Sure No: ${escapeHTML(sure.sure_no)}</p>
-                <p>Ayet Sayısı: ${currentSureInfo.ayet_sayisi}</p>
-                <p>Müfessir Sayısı: ${currentSureInfo.mufessir_count}</p>
-                <p>Toplam Video: ${currentSureInfo.total_videos}</p>
+            const currentSureInfo = sureInfo[sure.sure_ad] || { ayet_sayisi: 'Bilinmiyor', mufessir_count: 0, total_videos: 0, arabic_name: 'Bilinmiyor', meaning_tr: 'Bilinmiyor' };
+
+            const cardLink = document.createElement('a');
+            cardLink.href = `sureler.html?sure=${encodeURIComponent(sure.sure_ad)}`;
+            cardLink.classList.add('surah-item-link');
+
+            cardLink.innerHTML = `
+                <div class="surah-card-content">
+                    <div class="surah-card-left">
+                        <div class="surah-number-circle">${escapeHTML(sure.sure_no)}</div>
+                        <div class="surah-name-container">
+                            <span class="surah-name-latin">${escapeHTML(sure.sure_ad)}</span>
+                            <span class="surah-meaning">${escapeHTML(currentSureInfo.meaning_tr)}</span>
+                        </div>
+                    </div>
+                    <div class="surah-card-right">
+                        <span class="surah-name-arabic">${escapeHTML(currentSureInfo.arabic_name)}</span>
+                        <span class="surah-ayahs">${escapeHTML(currentSureInfo.ayet_sayisi)} Ayet</span>
+                    </div>
+                </div>
+                <div style="padding: 0 20px 10px; font-size: 0.85em; color: #666;">
+                    Müfessir Sayısı: ${escapeHTML(currentSureInfo.mufessir_count)} | Toplam Video: ${escapeHTML(currentSureInfo.total_videos)}
+                </div>
             `;
-            card.addEventListener('click', () => {
-                window.location.href = `sureler.html?sure=${encodeURIComponent(sure.sure_ad)}`;
-            });
-            surelerGrid.appendChild(card);
+            surelerGrid.appendChild(cardLink);
         });
     }
 }
@@ -222,92 +355,143 @@ function renderSurelerPage() {
 function displayVideosForSureAndMufessir(sureAd, mufessirAd) {
     const videoPlayer = document.getElementById('video-player');
     const videoDetayBaslik = document.getElementById('video-detay-baslik');
+    const videoDetayMufessir = document.getElementById('video-detay-mufessir'); // Müfessir adı için element
     const ilgiliVideolarListesi = document.getElementById('ilgili-videolar-listesi');
+
+    if (!videoPlayer || !videoDetayBaslik || !ilgiliVideolarListesi || !videoDetayMufessir) {
+        console.error("Video detay sayfası için gerekli HTML elementleri bulunamadı.");
+        return;
+    }
 
     const videos = allData.filter(item => item.standart_sure_ad === sureAd && item.mufessir === mufessirAd);
 
     if (videos.length > 0) {
-        playVideo(videos[0], videoPlayer, videoDetayBaslik, ilgiliVideolarListesi);
+        // İlk videoyu oynat
+        playVideo(videos[0], videoPlayer, videoDetayBaslik, ilgiliVideolarListesi, videoDetayMufessir);
 
+        // İlgili videolar listesini oluştur
         ilgiliVideolarListesi.innerHTML = '<h3>İlgili Videolar</h3>';
         videos.forEach(video => {
             const videoItem = document.createElement('div');
             videoItem.classList.add('video-item');
-            videoItem.dataset.videoId = video.youtube_video_id;
+            videoItem.dataset.videoId = video.youtube_video_id; // Video ID'sini data attribute olarak ata
             videoItem.innerHTML = `
-                <img src="${escapeHTML(video.video_thumbnail_url)}" alt="${escapeHTML(video.video_baslik)}">
+                <img src="${escapeHTML(video.video_thumbnail_url || 'img/placeholder-video.jpg')}" alt="${escapeHTML(video.video_baslik)}">
                 <div class="video-item-info">
                     <h4>${escapeHTML(video.video_baslik)}</h4>
                     <p>${escapeHTML(video.mufessir)}</p>
                 </div>
             `;
-            videoItem.addEventListener('click', () => playVideo(video, videoPlayer, videoDetayBaslik, ilgiliVideolarListesi));
+            videoItem.addEventListener('click', () => playVideo(video, videoPlayer, videoDetayBaslik, ilgiliVideolarListesi, videoDetayMufessir));
             ilgiliVideolarListesi.appendChild(videoItem);
         });
-        const firstVideoItem = ilgiliVideolarListesi.querySelector('.video-item');
+
+        // İlk videoyu aktif olarak işaretle
+        const firstVideoItem = ilgiliVideolarListesi.querySelector(`.video-item[data-video-id="${videos[0].youtube_video_id}"]`);
         if (firstVideoItem) {
             firstVideoItem.classList.add('active');
             currentPlayingVideoElement = firstVideoItem;
         }
-
     } else {
         ilgiliVideolarListesi.innerHTML = `<p>Bu sure ve müfessir için video bulunamadı.</p>`;
-        videoPlayer.src = "";
-        videoDetayBaslik.textContent = "";
+        videoPlayer.src = '';
+        videoDetayBaslik.textContent = 'Video Bulunamadı';
+        videoDetayMufessir.textContent = '';
     }
 }
 
 // Video oynatma fonksiyonu (genel kullanım için)
-function playVideo(videoData, playerElement, titleElement, videoListContainer) {
+function playVideo(videoData, playerElement, titleElement, videoListContainer, mufessirNameElement) {
     if (currentPlayingVideoElement) {
         currentPlayingVideoElement.classList.remove('active');
     }
 
-    // YouTube embed URL'ini düzelttim ve kaçırdım (escape ettim)
-    const embedSrc = `https://www.youtube.com/embed/${encodeURIComponent(videoData.youtube_video_id)}`; 
-    playerElement.src = embedSrc;
-    titleElement.textContent = videoData.video_baslik;
-    
-    if (videoListContainer) {
-        const playingVideoItem = videoListContainer.querySelector(`[data-video-id="${videoData.youtube_video_id}"]`);
-        if (playingVideoItem) {
-            playingVideoItem.classList.add('active');
-            currentPlayingVideoElement = playingVideoItem;
+    const videoId = videoData.youtube_video_id?.trim();
+    if (!videoId) {
+        console.error('Geçersiz YouTube Video ID:', videoData);
+        if (titleElement) titleElement.textContent = 'Hata: Video yüklenemedi (ID eksik)';
+        if (playerElement) playerElement.src = '';
+        if (mufessirNameElement) mufessirNameElement.textContent = '';
+        return;
+    }
+
+    // DOĞRU YouTube embed URL'si
+    const embedSrc = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}&rel=0&controls=1&autoplay=0`;
+
+    try {
+        if (playerElement) {
+            playerElement.src = ''; // Önce temizle
+            setTimeout(() => { // Tarayıcının src değişimini algılaması için kısa bir gecikme
+                playerElement.src = embedSrc;
+                console.log(`Iframe src atandı: ${embedSrc}`);
+            }, 50); // 50ms yeterli olabilir
+
+            if (titleElement) titleElement.textContent = escapeHTML(videoData.video_baslik || 'Video Başlığı Bulunamadı');
+            if (mufessirNameElement) mufessirNameElement.textContent = escapeHTML(videoData.mufessir || '');
+
+
+            if (videoListContainer) {
+                const playingVideoItem = videoListContainer.querySelector(`[data-video-id="${videoId}"]`);
+                if (playingVideoItem) {
+                    playingVideoItem.classList.add('active');
+                    currentPlayingVideoElement = playingVideoItem;
+                }
+            }
+
+            playerElement.onload = () => {
+                console.log(`Video iframe yüklendi (iframe onload): ${videoId}`);
+            };
+            playerElement.onerror = (e) => {
+                console.error(`Video iframe yükleme hatası (iframe onerror): ${videoId}`, e);
+                if (titleElement) titleElement.textContent = 'Hata: Video oynatılamıyor';
+                if (mufessirNameElement) mufessirNameElement.textContent = '';
+                const fallbackLink = document.createElement('a');
+                // DOĞRU fallback URL'si
+                fallbackLink.href = `https://www.youtube.com/watch?v=${videoId}`;
+                fallbackLink.textContent = "Videoyu YouTube'da İzle";
+                fallbackLink.target = "_blank";
+                fallbackLink.style.display = 'block';
+                fallbackLink.style.marginTop = '10px';
+                
+                // titleElement'ın içeriğini temizleyip sadece linki ekleyebiliriz veya altına ekleyebiliriz.
+                // Örnek: Başlığın altına ekleme
+                if (titleElement) {
+                    const errorMsg = document.createElement('p');
+                    errorMsg.textContent = 'Video oynatılamadı.';
+                    const currentTitle = titleElement.textContent;
+                    titleElement.innerHTML = ''; // Önceki içeriği temizle
+                    titleElement.appendChild(document.createTextNode(currentTitle + " - "));
+                    const errorSpan = document.createElement('span');
+                    errorSpan.style.color = 'red';
+                    errorSpan.textContent = 'Oynatılamıyor.';
+                    titleElement.appendChild(errorSpan);
+                    titleElement.appendChild(fallbackLink);
+                }
+            };
+        } else {
+            console.error("Player element (iframe) bulunamadı.");
+            if (titleElement) titleElement.textContent = 'Hata: Video oynatıcı elementi bulunamadı.';
         }
+    } catch (error) {
+        console.error('Video oynatma sırasında genel bir hata oluştu (catch):', error);
+        if (titleElement) titleElement.textContent = 'Hata: Video yüklenemedi (Genel Hata)';
+        if (mufessirNameElement) mufessirNameElement.textContent = '';
+        if (playerElement) playerElement.src = '';
     }
 }
+
 
 // Ana sayfa için varsayılan sureler listesi
 function renderDefaultHomePage() {
     const defaultSurelerGrid = document.getElementById('default-sureler-grid');
-    
-    const sureler = [];
-    allData.forEach(item => {
-        if (item.standart_sure_ad && !sureler.some(s => s.sure_ad === item.standart_sure_ad)) {
-            sureler.push({ sure_ad: item.standart_sure_ad, sure_no: item.sure_no });
-        }
-    });
-
-    sureler.sort((a, b) => parseInt(a.sure_no) - parseInt(b.sure_no));
-
-    sureler.forEach(sure => {
-        // Ayet sayısı artık hardcoded sureAyetSayilari objesinden geliyor
-        const currentSureInfo = sureInfo[sure.sure_ad] || { ayet_sayisi: 'Bilinmiyor', mufessir_count: 0, total_videos: 0 };
-        const card = document.createElement('div');
-        card.classList.add('card');
-        card.innerHTML = `
-            <h3>${escapeHTML(sure.sure_ad)}</h3>
-            <p>Sure No: ${escapeHTML(sure.sure_no)}</p>
-            <p>Ayet Sayısı: ${currentSureInfo.ayet_sayisi}</p>
-            <p>Müfessir Sayısı: ${currentSureInfo.mufessir_count}</p>
-            <p>Toplam Video: ${currentSureInfo.total_videos}</p>
-        `;
-        card.addEventListener('click', () => {
-            window.location.href = `sureler.html?sure=${encodeURIComponent(sure.sure_ad)}`;
-        });
-        defaultSurelerGrid.appendChild(card);
-    });
+    if (!defaultSurelerGrid) {
+        console.warn("Ana sayfa sure grid elementi ('default-sureler-grid') bulunamadı.");
+        return;
+    }
+    // Fonksiyon çağrıldığında renderSurelerInHome'u çağır
+    renderSurelerInHome();
 }
+
 
 // Müfessirler sayfasını render etme fonksiyonu
 function renderMufessirlerPage() {
@@ -339,10 +523,8 @@ function renderMufessirlerPage() {
 
     if (selectedMufessir) {
         if (selectedSureFromUrl) {
-            // Zafiyetli kısım düzeltildi
             pageTitle.innerHTML = `<a href="mufessirler.html?mufessir=${encodeURIComponent(selectedMufessir)}">${escapeHTML(selectedMufessir)}</a> - ${escapeHTML(selectedSureFromUrl)} Suresi Tefsirleri`;
         } else {
-            // Zafiyetli kısım düzeltildi
             pageTitle.innerHTML = `<a href="mufessirler.html?mufessir=${encodeURIComponent(selectedMufessir)}">${escapeHTML(selectedMufessir)}</a> Tefsirleri`;
         }
         
@@ -355,7 +537,7 @@ function renderMufessirlerPage() {
             if (video.standart_sure_ad && !surelerForMufessir.some(s => s.standart_sure_ad === video.standart_sure_ad)) {
                 surelerForMufessir.push({
                     standart_sure_ad: video.standart_sure_ad,
-                    sure_no: video.sure_no
+                    sure_no: video.sure_no // sure_no'yu da alalım sıralama için
                 });
             }
         });
@@ -364,18 +546,38 @@ function renderMufessirlerPage() {
         sureGridForMufessir.innerHTML = '';
         surelerForMufessir.forEach(sure => {
             const videoCount = mufessirSureVideoCounts[selectedMufessir]?.[sure.standart_sure_ad] || 0;
-            const card = document.createElement('div');
-            card.classList.add('card');
-            card.innerHTML = `
-                <h3>${escapeHTML(sure.standart_sure_ad)}</h3>
-                <p>Sure No: ${escapeHTML(sure.sure_no)}</p>
-                <p>Video Sayısı: ${videoCount}</p>
+            const currentSureInfo = sureInfo[sure.standart_sure_ad] || { ayet_sayisi: 'Bilinmiyor', arabic_name: 'Bilinmiyor', meaning_tr: 'Bilinmiyor' };
+
+            const cardLink = document.createElement('a');
+            // Linki doğru video detay sayfasına yönlendir
+            cardLink.href = `mufessirler.html?mufessir=${encodeURIComponent(selectedMufessir)}&sure=${encodeURIComponent(sure.standart_sure_ad)}`;
+            cardLink.classList.add('surah-item-link'); // Sureler için kullanılan stil kullanılabilir
+
+            cardLink.innerHTML = `
+                <div class="surah-card-content">
+                    <div class="surah-card-left">
+                        <div class="surah-number-circle">${escapeHTML(sure.sure_no)}</div>
+                        <div class="surah-name-container">
+                            <span class="surah-name-latin">${escapeHTML(sure.standart_sure_ad)}</span>
+                            <span class="surah-meaning">${escapeHTML(currentSureInfo.meaning_tr)}</span>
+                        </div>
+                    </div>
+                    <div class="surah-card-right">
+                        <span class="surah-name-arabic">${escapeHTML(currentSureInfo.arabic_name)}</span>
+                         <span class="surah-ayahs">${escapeHTML(currentSureInfo.ayet_sayisi)} Ayet</span>
+                    </div>
+                </div>
+                 <div style="padding: 0 20px 10px; font-size: 0.85em; color: #666;">
+                    Video Sayısı: ${escapeHTML(videoCount)}
+                </div>
             `;
-            card.addEventListener('click', () => {
-                window.location.href = `mufessirler.html?mufessir=${encodeURIComponent(selectedMufessir)}&sure=${encodeURIComponent(sure.standart_sure_ad)}`;
-            });
-            sureGridForMufessir.appendChild(card);
+            // Eski tıklama olayını kaldırıyoruz çünkü artık 'a' tag'i ile yönlendirme yapılıyor.
+            // card.addEventListener('click', () => {
+            //     window.location.href = `mufessirler.html?mufessir=${encodeURIComponent(selectedMufessir)}&sure=${encodeURIComponent(sure.standart_sure_ad)}`;
+            // });
+            sureGridForMufessir.appendChild(cardLink);
         });
+
 
         if (selectedSureFromUrl) {
             sureGridForMufessir.classList.add('hidden');
@@ -399,7 +601,7 @@ function renderMufessirlerPage() {
                 <img src="${escapeHTML(mufessirData.thumbnail)}" class="mufessir-thumbnail" alt="${escapeHTML(mufessirData.mufessir)}">
                 <div class="mufessir-card-info">
                     <h3>${escapeHTML(mufessirData.mufessir)}</h3>
-                    <p>Toplam Video: ${totalMufessirVideos}</p>
+                    <p>Toplam Video: ${escapeHTML(totalMufessirVideos)}</p>
                 </div>
             `;
             card.addEventListener('click', () => {
@@ -414,29 +616,36 @@ function renderMufessirlerPage() {
 function displayVideosForMufessirAndSure(mufessirAd, sureAd) {
     const mufessirVideoPlayer = document.getElementById('mufessir-video-player');
     const mufessirVideoDetayBaslik = document.getElementById('mufessir-video-detay-baslik');
+    const mufessirVideoDetayMufessir = document.getElementById('mufessir-video-detay-mufessir'); // Müfessir adı için
     const mufessirIlgiliVideolarListesi = document.getElementById('mufessir-ilgili-videolar-listesi');
+
+    if (!mufessirVideoPlayer || !mufessirVideoDetayBaslik || !mufessirIlgiliVideolarListesi || !mufessirVideoDetayMufessir) {
+        console.error("Müfessir video detay sayfası için gerekli HTML elementleri bulunamadı.");
+        return;
+    }
 
     const videos = allData.filter(item => item.mufessir === mufessirAd && item.standart_sure_ad === sureAd);
 
     if (videos.length > 0) {
-        playVideo(videos[0], mufessirVideoPlayer, mufessirVideoDetayBaslik, mufessirIlgiliVideolarListesi);
+        playVideo(videos[0], mufessirVideoPlayer, mufessirVideoDetayBaslik, mufessirIlgiliVideolarListesi, mufessirVideoDetayMufessir);
 
-        mufessirIlgiliVideolarListesi.innerHTML = '<h3>İlgili Videolar</h3>';
+        mufessirIlgiliVideolarListesi.innerHTML = '<h3>İlgili Videolar</h3>'; // Başlığı önce temizleyip ekle
         videos.forEach(video => {
             const videoItem = document.createElement('div');
             videoItem.classList.add('video-item');
-            videoItem.dataset.videoId = video.youtube_video_id;
+            videoItem.dataset.videoId = video.youtube_video_id; // Video ID'sini data attribute olarak ata
             videoItem.innerHTML = `
-                <img src="${escapeHTML(video.video_thumbnail_url)}" alt="${escapeHTML(video.video_baslik)}">
+                <img src="${escapeHTML(video.video_thumbnail_url || 'img/placeholder-video.jpg')}" alt="${escapeHTML(video.video_baslik)}">
                 <div class="video-item-info">
                     <h4>${escapeHTML(video.video_baslik)}</h4>
-                    <p>${escapeHTML(video.mufessir)}</p>
+                    <p>${escapeHTML(video.mufessir)}</p> 
                 </div>
             `;
-            videoItem.addEventListener('click', () => playVideo(video, mufessirVideoPlayer, mufessirVideoDetayBaslik, mufessirIlgiliVideolarListesi));
+            videoItem.addEventListener('click', () => playVideo(video, mufessirVideoPlayer, mufessirVideoDetayBaslik, mufessirIlgiliVideolarListesi, mufessirVideoDetayMufessir));
             mufessirIlgiliVideolarListesi.appendChild(videoItem);
         });
-        const firstVideoItem = mufessirIlgiliVideolarListesi.querySelector('.video-item');
+        // İlk videoyu aktif olarak işaretle
+        const firstVideoItem = mufessirIlgiliVideolarListesi.querySelector(`.video-item[data-video-id="${videos[0].youtube_video_id}"]`);
         if (firstVideoItem) {
             firstVideoItem.classList.add('active');
             currentPlayingVideoElement = firstVideoItem;
@@ -445,19 +654,27 @@ function displayVideosForMufessirAndSure(mufessirAd, sureAd) {
     } else {
         mufessirIlgiliVideolarListesi.innerHTML = `<p>Bu müfessir ve sure için video bulunamadı.</p>`;
         mufessirVideoPlayer.src = "";
-        mufessirVideoDetayBaslik.textContent = "";
+        mufessirVideoDetayBaslik.textContent = "Video Bulunamadı";
+        mufessirVideoDetayMufessir.textContent = "";
     }
 }
 
+
 function renderSurelerInHome() {
     const grid = document.getElementById('default-sureler-grid');
-    grid.innerHTML = '';
+    if (!grid) {
+        console.warn("Ana sayfa sure grid elementi ('default-sureler-grid') bulunamadı.");
+        return;
+    }
+    grid.innerHTML = ''; // Temizle
     grid.classList.remove('hidden');
-    document.getElementById('default-mufessirler-grid').classList.add('hidden');
+    const mufessirGrid = document.getElementById('default-mufessirler-grid');
+    if (mufessirGrid) mufessirGrid.classList.add('hidden');
+
 
     const sureler = [];
     allData.forEach(item => {
-        if (item.standart_sure_ad && !sureler.some(s => s.sure_ad === item.standart_sure_ad)) {
+        if (item.standart_sure_ad && item.sure_no && !sureler.some(s => s.sure_ad === item.standart_sure_ad)) {
             sureler.push({ sure_ad: item.standart_sure_ad, sure_no: item.sure_no });
         }
     });
@@ -465,29 +682,45 @@ function renderSurelerInHome() {
     sureler.sort((a, b) => parseInt(a.sure_no) - parseInt(b.sure_no));
 
     sureler.forEach(sure => {
-        // Ayet sayısı artık hardcoded sureAyetSayilari objesinden geliyor
-        const currentSureInfo = sureInfo[sure.sure_ad] || { ayet_sayisi: 'Bilinmiyor', mufessir_count: 0, total_videos: 0 };
-        const card = document.createElement('div');
-        card.classList.add('card');
-        card.innerHTML = `
-            <h3>${escapeHTML(sure.sure_ad)}</h3>
-            <p>Sure No: ${escapeHTML(sure.sure_no)}</p>
-            <p>Ayet Sayısı: ${currentSureInfo.ayet_sayisi}</p>
-            <p>Müfessir Sayısı: ${currentSureInfo.mufessir_count}</p>
-            <p>Toplam Video: ${currentSureInfo.total_videos}</p>
+        const currentSureInfo = sureInfo[sure.sure_ad] || { ayet_sayisi: 'Bilinmiyor', mufessir_count: 0, total_videos: 0, arabic_name: 'Bilinmiyor', meaning_tr: 'Bilinmiyor' };
+
+        const cardLink = document.createElement('a');
+        cardLink.href = `sureler.html?sure=${encodeURIComponent(sure.sure_ad)}`;
+        cardLink.classList.add('surah-item-link');
+
+        cardLink.innerHTML = `
+            <div class="surah-card-content">
+                <div class="surah-card-left">
+                    <div class="surah-number-circle">${escapeHTML(sure.sure_no)}</div>
+                    <div class="surah-name-container">
+                        <span class="surah-name-latin">${escapeHTML(sure.sure_ad)}</span>
+                        <span class="surah-meaning">${escapeHTML(currentSureInfo.meaning_tr)}</span>
+                    </div>
+                </div>
+                <div class="surah-card-right">
+                    <span class="surah-name-arabic">${escapeHTML(currentSureInfo.arabic_name)}</span>
+                    <span class="surah-ayahs">${escapeHTML(currentSureInfo.ayet_sayisi)} Ayet</span>
+                </div>
+            </div>
+            <div style="padding: 0 20px 10px; font-size: 0.85em; color: #666;">
+                Müfessir Sayısı: ${escapeHTML(currentSureInfo.mufessir_count)} | Toplam Video: ${escapeHTML(currentSureInfo.total_videos)}
+            </div>
         `;
-        card.addEventListener('click', () => {
-            window.location.href = `sureler.html?sure=${encodeURIComponent(sure.sure_ad)}`;
-        });
-        grid.appendChild(card);
+        grid.appendChild(cardLink);
     });
 }
 
 function renderMufessirlerInHome() {
     const grid = document.getElementById('default-mufessirler-grid');
-    grid.innerHTML = '';
+     if (!grid) {
+        console.warn("Ana sayfa müfessir grid elementi ('default-mufessirler-grid') bulunamadı.");
+        return;
+    }
+    grid.innerHTML = ''; // Temizle
     grid.classList.remove('hidden');
-    document.getElementById('default-sureler-grid').classList.add('hidden');
+    const surelerGrid = document.getElementById('default-sureler-grid');
+    if (surelerGrid) surelerGrid.classList.add('hidden');
+
 
     const mufessirler = [];
     allData.forEach(item => {
@@ -503,16 +736,18 @@ function renderMufessirlerInHome() {
 
     mufessirler.forEach(mufessirData => {
         const totalMufessirVideos = Object.values(mufessirSureVideoCounts[mufessirData.mufessir] || {}).reduce((sum, count) => sum + count, 0);
-        const card = document.createElement('div');
-        card.classList.add('card', 'mufessir-card');
+        const card = document.createElement('div'); // Div olarak kalabilir, tıklama olayı ekleniyor
+        card.classList.add('card', 'mufessir-card'); // Stil sınıfları
+        card.style.cursor = 'pointer'; // Tıklanabilir olduğunu belirtmek için
+
         card.innerHTML = `
             <img src="${escapeHTML(mufessirData.thumbnail)}" class="mufessir-thumbnail" alt="${escapeHTML(mufessirData.mufessir)}">
             <div class="mufessir-card-info">
                 <h3>${escapeHTML(mufessirData.mufessir)}</h3>
-                <p>Toplam Video: ${totalMufessirVideos}</p>
+                <p>Toplam Video: ${escapeHTML(totalMufessirVideos)}</p>
             </div>
         `;
-        card.addEventListener('click', () => {
+        card.addEventListener('click', () => { // Tıklama olayı
             window.location.href = `mufessirler.html?mufessir=${encodeURIComponent(mufessirData.mufessir)}`;
         });
         grid.appendChild(card);
@@ -525,16 +760,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const mufessirBtn = document.getElementById('show-mufessirler');
 
     if (sureBtn && mufessirBtn) {
-        sureBtn.addEventListener('click', () => {
-            renderSurelerInHome();
+        sureBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // Eğer 'a' tag ise varsayılan davranışı engelle
+            if (typeof renderSurelerInHome === 'function') { // Fonksiyonun tanımlı olup olmadığını kontrol et
+                 renderSurelerInHome();
+            }
             sureBtn.classList.add('active');
             mufessirBtn.classList.remove('active');
         });
 
-        mufessirBtn.addEventListener('click', () => {
-            renderMufessirlerInHome();
+        mufessirBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // Eğer 'a' tag ise varsayılan davranışı engelle
+            if (typeof renderMufessirlerInHome === 'function') { // Fonksiyonun tanımlı olup olmadığını kontrol et
+                renderMufessirlerInHome();
+            }
             mufessirBtn.classList.add('active');
             sureBtn.classList.remove('active');
         });
+
+        // Sayfa ilk yüklendiğinde Sureler'i göster ve butonu aktif yap
+        // Bu kısım PapaParse yüklenmesinden sonra çağrılan renderDefaultHomePage içine taşındı.
+        // setTimeout(() => document.getElementById('show-sureler')?.click(), 500);
     }
 });

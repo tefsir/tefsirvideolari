@@ -4,62 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kur'an Tefsirleri</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        :root {
-            --primary: #3b82f6;
-            --primary-dark: #1d4ed8;
-            --background: #f9fafb;
-            --text: #1f2937;
-            --card-bg: #ffffff;
-            --hover-bg: #eff6ff;
-        }
-
-        body {
-            background-color: var(--background);
-            color: var(--text);
-        }
-
-        .button {
-            background-color: var(--primary);
-            border: none;
-            padding: 1rem 2rem;
-            font-size: 1.2rem;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .button:hover,
-        .button.active {
-            background-color: var(--primary-dark);
-            transform: scale(1.05);
-        }
-
-        .grid-container {
-            margin-top: 1rem;
-        }
-
-        .video-page-layout {
-            margin-top: 2rem;
-        }
-
-        .footer {
-            margin-top: 4rem;
-        }
-
-        .breadcrumb {
-            text-align: center;
-            font-size: 1.1rem;
-            font-weight: 500;
-            color: var(--primary-dark);
-            margin-bottom: 1rem;
-        }
-
-        header {
-            margin-top: 2rem;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css?v=1">
+    <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet"> <!-- Arapça font -->
 </head>
 <body>
 <nav class="navbar">
@@ -106,7 +52,7 @@
     </div>
 </footer>
 
-<script src="script.js"></script>
+<script src="script.js?v=1"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => document.getElementById('show-sureler')?.click(), 500);
