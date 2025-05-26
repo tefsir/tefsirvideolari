@@ -427,7 +427,7 @@ function playVideo(videoData, playerElement, titleElement, videoListContainer, m
             }, 50); // 50ms yeterli olabilir
 
             if (titleElement) titleElement.textContent = escapeHTML(videoData.video_baslik || 'Video Başlığı Bulunamadı');
-            if (mufessirNameElement) mufessirNameElement.textContent = escapeHTML(videoData.mufessir || '');
+            // if (mufessirNameElement) mufessirNameElement.textContent = escapeHTML(videoData.mufessir || '');
 
 
             if (videoListContainer) {
