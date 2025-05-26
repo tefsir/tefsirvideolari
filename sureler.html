@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sureler</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-brand">Kur'an Tefsirleri</a>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Ana Sayfa</a></li>
+                <li><a href="sureler.html" class="nav-link active">Sureler</a></li>
+                <li><a href="mufessirler.html" class="nav-link">Müfessirler</a></li>
+                <li><a href="hakkinda.html" class="nav-link">Hakkında</a></li>
+                <li><a href="iletisim.html" class="nav-link">İletişim</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+      <!-- <a href="index.html" class="back-button">← Geri</a> -->
+        <h1 id="page-title">Sureler</h1>
+    </header>
+    
+    <main id="content-area">
+        <div id="sureler-grid" class="grid-container"></div>
+        <div id="mufessir-grid-for-sure" class="grid-container hidden"></div>
+        <div id="video-detay" class="hidden video-page-layout">
+            <div class="video-player-area">
+                <h2 id="video-detay-baslik"></h2>
+                <p id="video-detay-mufessir" class="mufessir-link"></p>
+                <div class="video-container">
+                    <iframe id="video-player" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            </div>
+            <div id="ilgili-videolar-listesi" class="video-list-area">
+                <h3>İlgili Videolar</h3>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="index.html">Ana Sayfa</a>
+                <a href="sureler.html">Sureler</a>
+                <a href="mufessirler.html">Müfessirler</a>
+                <a href="hakkinda.html">Hakkında</a>
+                <a href="iletisim.html">İletişim</a>
+            </div>
+            <div class="footer-text">
+                <p>Kur'an-ı Kerim tefsir videolarının toplandığı kapsamlı bir arşiv platformu.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
