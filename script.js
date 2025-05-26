@@ -17,6 +17,14 @@ function getUrlParameter(name) {
     return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
 }
 
+// XSS önleme için HTML kaçırma (escaping) yardımcı fonksiyonu
+function escapeHTML(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+
+
 let allData = [];
 let currentPlayingVideoElement = null;
 
@@ -135,7 +143,8 @@ function renderSurelerPage() {
 
     if (selectedSure) {
         if (selectedMufessirFromUrl) {
-            pageTitle.innerHTML = `${selectedSure} Suresi - <a href="mufessirler.html?mufessir=${encodeURIComponent(selectedMufessirFromUrl)}">${selectedMufessirFromUrl}</a> Tefsirleri`;
+            // Zafiyetli kısım düzeltildi
+            pageTitle.innerHTML = `${escapeHTML(selectedSure)} Suresi - <a href="mufessirler.html?mufessir=${encodeURIComponent(selectedMufessirFromUrl)}">${escapeHTML(selectedMufessirFromUrl)}</a> Tefsirleri`;
         } else {
             pageTitle.textContent = `${selectedSure} Suresi`;
         }
@@ -164,9 +173,9 @@ function renderSurelerPage() {
             card.classList.add('card', 'mufessir-card');
             
             card.innerHTML = `
-                <img src="${mufessirData.thumbnail}" alt="${mufessirData.mufessir} thumbnail" class="mufessir-thumbnail">
+                <img src="${escapeHTML(mufessirData.thumbnail)}" alt="${escapeHTML(mufessirData.mufessir)} thumbnail" class="mufessir-thumbnail">
                 <div class="mufessir-card-info">
-                    <h3>${mufessirData.mufessir}</h3>
+                    <h3>${escapeHTML(mufessirData.mufessir)}</h3>
                     <p>Video Sayısı: ${videoCount}</p>
                 </div>
             `;
@@ -195,8 +204,8 @@ function renderSurelerPage() {
             const card = document.createElement('div');
             card.classList.add('card');
             card.innerHTML = `
-                <h3>${sure.sure_ad}</h3>
-                <p>Sure No: ${sure.sure_no}</p>
+                <h3>${escapeHTML(sure.sure_ad)}</h3>
+                <p>Sure No: ${escapeHTML(sure.sure_no)}</p>
                 <p>Ayet Sayısı: ${currentSureInfo.ayet_sayisi}</p>
                 <p>Müfessir Sayısı: ${currentSureInfo.mufessir_count}</p>
                 <p>Toplam Video: ${currentSureInfo.total_videos}</p>
@@ -226,10 +235,10 @@ function displayVideosForSureAndMufessir(sureAd, mufessirAd) {
             videoItem.classList.add('video-item');
             videoItem.dataset.videoId = video.youtube_video_id;
             videoItem.innerHTML = `
-                <img src="${video.video_thumbnail_url}" alt="${video.video_baslik}">
+                <img src="${escapeHTML(video.video_thumbnail_url)}" alt="${escapeHTML(video.video_baslik)}">
                 <div class="video-item-info">
-                    <h4>${video.video_baslik}</h4>
-                    <p>${video.mufessir}</p>
+                    <h4>${escapeHTML(video.video_baslik)}</h4>
+                    <p>${escapeHTML(video.mufessir)}</p>
                 </div>
             `;
             videoItem.addEventListener('click', () => playVideo(video, videoPlayer, videoDetayBaslik, ilgiliVideolarListesi));
@@ -254,7 +263,8 @@ function playVideo(videoData, playerElement, titleElement, videoListContainer) {
         currentPlayingVideoElement.classList.remove('active');
     }
 
-    const embedSrc = `https://www.youtube.com/embed/${videoData.youtube_video_id}`; // Corrected YouTube embed URL
+    // YouTube embed URL'ini düzelttim ve kaçırdım (escape ettim)
+    const embedSrc = `https://www.youtube.com/embed/${encodeURIComponent(videoData.youtube_video_id)}`; 
     playerElement.src = embedSrc;
     titleElement.textContent = videoData.video_baslik;
     
@@ -286,8 +296,8 @@ function renderDefaultHomePage() {
         const card = document.createElement('div');
         card.classList.add('card');
         card.innerHTML = `
-            <h3>${sure.sure_ad}</h3>
-            <p>Sure No: ${sure.sure_no}</p>
+            <h3>${escapeHTML(sure.sure_ad)}</h3>
+            <p>Sure No: ${escapeHTML(sure.sure_no)}</p>
             <p>Ayet Sayısı: ${currentSureInfo.ayet_sayisi}</p>
             <p>Müfessir Sayısı: ${currentSureInfo.mufessir_count}</p>
             <p>Toplam Video: ${currentSureInfo.total_videos}</p>
@@ -329,9 +339,11 @@ function renderMufessirlerPage() {
 
     if (selectedMufessir) {
         if (selectedSureFromUrl) {
-            pageTitle.innerHTML = `<a href="mufessirler.html?mufessir=${encodeURIComponent(selectedMufessir)}">${selectedMufessir}</a> - ${selectedSureFromUrl} Suresi Tefsirleri`;
+            // Zafiyetli kısım düzeltildi
+            pageTitle.innerHTML = `<a href="mufessirler.html?mufessir=${encodeURIComponent(selectedMufessir)}">${escapeHTML(selectedMufessir)}</a> - ${escapeHTML(selectedSureFromUrl)} Suresi Tefsirleri`;
         } else {
-            pageTitle.innerHTML = `<a href="mufessirler.html?mufessir=${encodeURIComponent(selectedMufessir)}">${selectedMufessir}</a> Tefsirleri`;
+            // Zafiyetli kısım düzeltildi
+            pageTitle.innerHTML = `<a href="mufessirler.html?mufessir=${encodeURIComponent(selectedMufessir)}">${escapeHTML(selectedMufessir)}</a> Tefsirleri`;
         }
         
         mufessirlerGrid.classList.add('hidden');
@@ -355,8 +367,8 @@ function renderMufessirlerPage() {
             const card = document.createElement('div');
             card.classList.add('card');
             card.innerHTML = `
-                <h3>${sure.standart_sure_ad}</h3>
-                <p>Sure No: ${sure.sure_no}</p>
+                <h3>${escapeHTML(sure.standart_sure_ad)}</h3>
+                <p>Sure No: ${escapeHTML(sure.sure_no)}</p>
                 <p>Video Sayısı: ${videoCount}</p>
             `;
             card.addEventListener('click', () => {
@@ -384,9 +396,9 @@ function renderMufessirlerPage() {
             card.classList.add('card', 'mufessir-card');
             
             card.innerHTML = `
-                <img src="${mufessirData.thumbnail}" alt="${mufessirData.mufessir}">
+                <img src="${escapeHTML(mufessirData.thumbnail)}" class="mufessir-thumbnail" alt="${escapeHTML(mufessirData.mufessir)}">
                 <div class="mufessir-card-info">
-                    <h3>${mufessirData.mufessir}</h3>
+                    <h3>${escapeHTML(mufessirData.mufessir)}</h3>
                     <p>Toplam Video: ${totalMufessirVideos}</p>
                 </div>
             `;
@@ -415,10 +427,10 @@ function displayVideosForMufessirAndSure(mufessirAd, sureAd) {
             videoItem.classList.add('video-item');
             videoItem.dataset.videoId = video.youtube_video_id;
             videoItem.innerHTML = `
-                <img src="${video.video_thumbnail_url}" alt="${video.video_baslik}">
+                <img src="${escapeHTML(video.video_thumbnail_url)}" alt="${escapeHTML(video.video_baslik)}">
                 <div class="video-item-info">
-                    <h4>${video.video_baslik}</h4>
-                    <p>${video.mufessir}</p>
+                    <h4>${escapeHTML(video.video_baslik)}</h4>
+                    <p>${escapeHTML(video.mufessir)}</p>
                 </div>
             `;
             videoItem.addEventListener('click', () => playVideo(video, mufessirVideoPlayer, mufessirVideoDetayBaslik, mufessirIlgiliVideolarListesi));
@@ -458,8 +470,8 @@ function renderSurelerInHome() {
         const card = document.createElement('div');
         card.classList.add('card');
         card.innerHTML = `
-            <h3>${sure.sure_ad}</h3>
-            <p>Sure No: ${sure.sure_no}</p>
+            <h3>${escapeHTML(sure.sure_ad)}</h3>
+            <p>Sure No: ${escapeHTML(sure.sure_no)}</p>
             <p>Ayet Sayısı: ${currentSureInfo.ayet_sayisi}</p>
             <p>Müfessir Sayısı: ${currentSureInfo.mufessir_count}</p>
             <p>Toplam Video: ${currentSureInfo.total_videos}</p>
@@ -494,9 +506,9 @@ function renderMufessirlerInHome() {
         const card = document.createElement('div');
         card.classList.add('card', 'mufessir-card');
         card.innerHTML = `
-            <img src="${mufessirData.thumbnail}" class="mufessir-thumbnail" alt="${mufessirData.mufessir}">
+            <img src="${escapeHTML(mufessirData.thumbnail)}" class="mufessir-thumbnail" alt="${escapeHTML(mufessirData.mufessir)}">
             <div class="mufessir-card-info">
-                <h3>${mufessirData.mufessir}</h3>
+                <h3>${escapeHTML(mufessirData.mufessir)}</h3>
                 <p>Toplam Video: ${totalMufessirVideos}</p>
             </div>
         `;
