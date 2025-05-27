@@ -400,7 +400,6 @@ function displayVideosForSureAndMufessir(sureAd, mufessirAd) {
     }
 }
 
-// Video oynatma fonksiyonu (genel kullanım için)
 function playVideo(videoData, playerElement, titleElement, videoListContainer, mufessirNameElement) {
     if (currentPlayingVideoElement) {
         currentPlayingVideoElement.classList.remove('active');
@@ -415,20 +414,33 @@ function playVideo(videoData, playerElement, titleElement, videoListContainer, m
         return;
     }
 
-    // DOĞRU YouTube embed URL'si
-    const embedSrc = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}&rel=0&controls=1&autoplay=0`;
+    // Güncellenmiş embed URL parametreleri
+    const embedSrc = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}&widgetid=1`;
 
     try {
         if (playerElement) {
-            playerElement.src = ''; // Önce temizle
-            setTimeout(() => { // Tarayıcının src değişimini algılaması için kısa bir gecikme
-                playerElement.src = embedSrc;
-                console.log(`Iframe src atandı: ${embedSrc}`);
-            }, 50); // 50ms yeterli olabilir
-
-            if (titleElement) titleElement.textContent = escapeHTML(videoData.video_baslik || 'Video Başlığı Bulunamadı');
-            // if (mufessirNameElement) mufessirNameElement.textContent = escapeHTML(videoData.mufessir || '');
-
+            // Önceki olay dinleyicilerini temizle
+            playerElement.onload = null;
+            playerElement.onerror = null;
+            
+            // Yeni bir iframe oluşturup eskisiyle değiştir (Chrome için daha güvenilir)
+            const newIframe = document.createElement('iframe');
+            newIframe.setAttribute('allowfullscreen', '');
+            newIframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+            newIframe.style.width = playerElement.style.width || '100%';
+            newIframe.style.height = playerElement.style.height || '100%';
+            newIframe.style.border = 'none';
+            
+            // YouTube API için gerekli özellikler
+            newIframe.id = 'youtube-player-' + videoId;
+            newIframe.src = embedSrc;
+            
+            playerElement.replaceWith(newIframe);
+            playerElement = newIframe;
+            
+            if (titleElement) {
+                titleElement.textContent = escapeHTML(videoData.video_baslik || 'Video Başlığı Bulunamadı');
+            }
 
             if (videoListContainer) {
                 const playingVideoItem = videoListContainer.querySelector(`[data-video-id="${videoId}"]`);
@@ -440,33 +452,19 @@ function playVideo(videoData, playerElement, titleElement, videoListContainer, m
 
             playerElement.onload = () => {
                 console.log(`Video iframe yüklendi (iframe onload): ${videoId}`);
+                // API hazır olduğunda oynatmayı başlat
+                if (window.YT && window.YT.Player) {
+                    const player = new YT.Player(playerElement.id, {
+                        events: {
+                            'onReady': (event) => event.target.playVideo()
+                        }
+                    });
+                }
             };
+
             playerElement.onerror = (e) => {
                 console.error(`Video iframe yükleme hatası (iframe onerror): ${videoId}`, e);
-                if (titleElement) titleElement.textContent = 'Hata: Video oynatılamıyor';
-                if (mufessirNameElement) mufessirNameElement.textContent = '';
-                const fallbackLink = document.createElement('a');
-                // DOĞRU fallback URL'si
-                fallbackLink.href = `https://www.youtube.com/watch?v=${videoId}`;
-                fallbackLink.textContent = "Videoyu YouTube'da İzle";
-                fallbackLink.target = "_blank";
-                fallbackLink.style.display = 'block';
-                fallbackLink.style.marginTop = '10px';
-                
-                // titleElement'ın içeriğini temizleyip sadece linki ekleyebiliriz veya altına ekleyebiliriz.
-                // Örnek: Başlığın altına ekleme
-                if (titleElement) {
-                    const errorMsg = document.createElement('p');
-                    errorMsg.textContent = 'Video oynatılamadı.';
-                    const currentTitle = titleElement.textContent;
-                    titleElement.innerHTML = ''; // Önceki içeriği temizle
-                    titleElement.appendChild(document.createTextNode(currentTitle + " - "));
-                    const errorSpan = document.createElement('span');
-                    errorSpan.style.color = 'red';
-                    errorSpan.textContent = 'Oynatılamıyor.';
-                    titleElement.appendChild(errorSpan);
-                    titleElement.appendChild(fallbackLink);
-                }
+                showFallbackOption(videoId, titleElement, mufessirNameElement);
             };
         } else {
             console.error("Player element (iframe) bulunamadı.");
@@ -474,13 +472,27 @@ function playVideo(videoData, playerElement, titleElement, videoListContainer, m
         }
     } catch (error) {
         console.error('Video oynatma sırasında genel bir hata oluştu (catch):', error);
-        if (titleElement) titleElement.textContent = 'Hata: Video yüklenemedi (Genel Hata)';
-        if (mufessirNameElement) mufessirNameElement.textContent = '';
-        if (playerElement) playerElement.src = '';
+        showFallbackOption(videoId, titleElement, mufessirNameElement);
     }
 }
 
-
+function showFallbackOption(videoId, titleElement, mufessirNameElement) {
+    if (titleElement) {
+        const fallbackLink = document.createElement('a');
+        fallbackLink.href = `https://www.youtube.com/watch?v=${videoId}`;
+        fallbackLink.textContent = "Videoyu YouTube'da İzle";
+        fallbackLink.target = "_blank";
+        fallbackLink.className = "youtube-fallback-link";
+        
+        titleElement.innerHTML = '';
+        const errorMsg = document.createElement('span');
+        errorMsg.textContent = 'Video oynatılamadı. ';
+        errorMsg.style.color = 'red';
+        titleElement.appendChild(errorMsg);
+        titleElement.appendChild(fallbackLink);
+    }
+    if (mufessirNameElement) mufessirNameElement.textContent = '';
+}
 // Ana sayfa için varsayılan sureler listesi
 function renderDefaultHomePage() {
     const defaultSurelerGrid = document.getElementById('default-sureler-grid');
