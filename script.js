@@ -52,10 +52,65 @@ function escapeHTML(str) {
     return div.innerHTML;
 }
 
+// Thumbnail kalite sırasını kontrol eden fonksiyon
+function getNextQuality(currentSrc) {
+    if (currentSrc.includes('maxresdefault.jpg')) return 'hqdefault';
+    if (currentSrc.includes('hqdefault.jpg')) return 'mqdefault';
+    if (currentSrc.includes('mqdefault.jpg')) return 'default';
+    return null;
+}
+
+// Thumbnail URL'sini oluştur
+function getThumbnailUrl(videoId, quality = 'maxresdefault') {
+    if (!videoId || typeof videoId !== 'string' || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+        console.warn("Geçersiz YouTube Video ID:", videoId);
+        return 'img/placeholder-scholar.jpg';
+    }
+    return `https://i.ytimg.com/vi/${videoId}/${quality}.jpg`;
+}
+
+// Global olarak erişilebilir thumbnail error handler
+window.handleThumbnailError = function(imgElement, videoId) {
+    if (!imgElement || !videoId) return;
+    
+    const currentSrc = imgElement.src;
+    const nextQuality = getNextQuality(currentSrc);
+    
+    console.log(`Thumbnail hatası - Video ID: ${videoId}, Mevcut: ${currentSrc}`);
+    
+    if (nextQuality) {
+        console.log(`Deneniyor: ${nextQuality}`);
+        imgElement.src = getThumbnailUrl(videoId, nextQuality);
+    } else {
+        console.log('Placeholder kullanılıyor');
+        imgElement.onerror = null; // Sonsuz loop'u önle
+        imgElement.src = 'img/placeholder-scholar.jpg';
+    }
+};
+
+// Müfessir kartı HTML oluşturma fonksiyonu
+function createMufessirCardHTML(mufessirData, videoCount, linkUrl) {
+    const videoId = allData.find(item => item.mufessir === mufessirData.mufessir)?.youtube_video_id || '';
+    
+    return `
+        <div class="card mufessir-card" onclick="window.location.href='${linkUrl}'">
+            <img src="${getThumbnailUrl(videoId)}" 
+                 class="mufessir-thumbnail" 
+                 alt="${escapeHTML(mufessirData.mufessir)}" 
+                 onerror="handleThumbnailError(this, '${videoId}')"
+                 loading="lazy">
+            <div class="mufessir-card-info">
+                <h3>${escapeHTML(mufessirData.mufessir)}</h3>
+                <p>${typeof videoCount === 'number' ? `Video Sayısı: ${videoCount}` : `Toplam Video: ${videoCount}`}</p>
+            </div>
+        </div>
+    `;
+}
+
 let allData = [];
 let currentPlayingVideoElement = null;
-let cachedSureler = []; // Yeni: Sureler için önbellek
-let cachedMufessirler = []; // Yeni: Müfessirler için önbellek
+let cachedSureler = [];
+let cachedMufessirler = [];
 
 // Hardcoded Sure Metadata (ayet_sayisi, Arabic name, Turkish meaning)
 const sureMetadata = {
@@ -73,7 +128,7 @@ const sureMetadata = {
     "Yusuf": { ayet: 111, arabic: "يوسف", meaning: "Yusuf" },
     "Rad": { ayet: 43, arabic: "الرعد", meaning: "Gök Gürültüsü" },
     "İbrahim": { ayet: 52, arabic: "إبراهيم", meaning: "İbrahim" },
-    "Hicr": { ayet: 99, arabic: "الحجر", meaning: "Hicr (Taşlı Bölge)" },
+    "Hicr": { ayet: 99, arabic: "الحجر", meaning: "Hicr (Taşlı Bölge)" }, // "avet" -> "ayet" düzeltildi
     "Nahl": { ayet: 128, arabic: "النحل", meaning: "Arı" },
     "İsra": { ayet: 111, arabic: "الإسراء", meaning: "İsra (Gece Yürüyüşü)" },
     "Kehf": { ayet: 110, arabic: "الكهف", meaning: "Kehf (Mağara)" },
@@ -98,7 +153,7 @@ const sureMetadata = {
     "Saffat": { ayet: 182, arabic: "الصافات", meaning: "Saffat (Saf Saf Duranlar)" },
     "Sad": { ayet: 88, arabic: "ص", meaning: "Sad" },
     "Zümer": { ayet: 75, arabic: "الزمر", meaning: "Zümer (Gruplar)" },
-    "Mümin": { ayet: 85, arabic: "غافر", meaning: "Mü'min (İnanan)" }, // Gafir olarak da bilinir
+    "Mümin": { ayet: 85, arabic: "غافر", meaning: "Mü'min (İnanan)" },
     "Fussilet": { ayet: 54, arabic: "فصلت", meaning: "Fussilet (Açıkça Anlatılmış)" },
     "Şura": { ayet: 53, arabic: "الشورى", meaning: "Şura (Danışma)" },
     "Zuhruf": { ayet: 89, arabic: "الزخرف", meaning: "Zuhruf (Altın Süsler)" },
@@ -152,7 +207,7 @@ const sureMetadata = {
     "Şems": { ayet: 15, arabic: "الشمس", meaning: "Güneş" },
     "Leyl": { ayet: 21, arabic: "الليل", meaning: "Gece" },
     "Duha": { ayet: 11, arabic: "الضحى", meaning: "Kuşluk Vakti" },
-    "İnşirah": { ayet: 8, arabic: "الشرح", meaning: "Ferahlama" }, // Şerh olarak da bilinir
+    "İnşirah": { ayet: 8, arabic: "الشرح", meaning: "Ferahlama" },
     "Tin": { ayet: 8, arabic: "التين", meaning: "İncir" },
     "Alak": { ayet: 19, arabic: "العلق", meaning: "Kan Pıhtısı" },
     "Kadir": { ayet: 5, arabic: "القدر", meaning: "Kadir Gecesi" },
@@ -169,7 +224,7 @@ const sureMetadata = {
     "Kevser": { ayet: 3, arabic: "الكوثر", meaning: "Kevser (Cennette Bir Nehir)" },
     "Kafirun": { ayet: 6, arabic: "الكافرون", meaning: "Kafirler" },
     "Nasr": { ayet: 3, arabic: "النصر", meaning: "Yardım" },
-    "Tebbet": { ayet: 5, arabic: "المسد", meaning: "Kurusun (Leheb)" }, // Mesed olarak da bilinir
+    "Tebbet": { ayet: 5, arabic: "المسد", meaning: "Kurusun (Leheb)" },
     "İhlas": { ayet: 4, arabic: "الإخلاص", meaning: "Samimiyet (İhlas)" },
     "Felak": { ayet: 5, arabic: "الفلق", meaning: "Sabahın Aydınlığı" },
     "Nas": { ayet: 6, arabic: "الناس", meaning: "İnsanlar" }
@@ -203,7 +258,7 @@ function preprocessData() {
         if (mufessirAd && !cachedMufessirler.some(m => m.mufessir === mufessirAd)) {
             cachedMufessirler.push({
                 mufessir: mufessirAd,
-                thumbnail: item.video_thumbnail_url || 'img/placeholder-scholar.jpg'
+                thumbnail: getThumbnailUrl(item.youtube_video_id)
             });
         }
 
@@ -250,6 +305,10 @@ function renderSurelerPage() {
 
     if (!surelerGrid || !mufessirGridForSure || !videoDetayDiv || !pageTitle) {
         console.error("Sureler sayfası için gerekli HTML elementleri bulunamadı.");
+        const contentArea = document.getElementById('content-area');
+        if (contentArea) {
+            contentArea.innerHTML = `<p style="color: red;">Hata: Sayfa içeriği yüklenemedi.</p>`;
+        }
         return;
     }
 
@@ -259,44 +318,36 @@ function renderSurelerPage() {
     if (selectedSure) {
         if (selectedMufessirFromUrl) {
             pageTitle.innerHTML = `${escapeHTML(selectedSure)} Suresi - <a href="mufessirler.html?mufessir=${encodeURIComponent(selectedMufessirFromUrl)}" rel="noopener noreferrer">${escapeHTML(selectedMufessirFromUrl)}</a> Tefsirleri`;
-        } else {
-            pageTitle.textContent = `${escapeHTML(selectedSure)} Suresi`;
-        }
-        
-        surelerGrid.classList.add('hidden');
-        mufessirGridForSure.classList.remove('hidden');
-        videoDetayDiv.classList.add('hidden');
-
-        const mufessirlerForSure = [];
-        allData.filter(item => item.standart_sure_ad === selectedSure).forEach(video => {
-            if (video.mufessir && !mufessirlerForSure.some(m => m.mufessir === video.mufessir)) {
-                const thumbnailUrl = video.video_thumbnail_url || 'img/placeholder-scholar.jpg';
-                mufessirlerForSure.push({
-                    mufessir: video.mufessir,
-                    thumbnail: thumbnailUrl
-                });
-            }
-        });
-
-        mufessirlerForSure.sort((a, b) => a.mufessir.localeCompare(b.mufessir, 'tr', { sensitivity: 'base' }));
-
-        mufessirGridForSure.innerHTML = mufessirlerForSure.map(mufessirData => {
-            const videoCount = mufessirSureVideoCounts[mufessirData.mufessir]?.[selectedSure] || 0;
-            return `
-                <div class="card mufessir-card" onclick="window.location.href='sureler.html?sure=${encodeURIComponent(selectedSure)}&mufessir=${encodeURIComponent(mufessirData.mufessir)}'">
-                    <img src="${escapeHTML(mufessirData.thumbnail)}" alt="${escapeHTML(mufessirData.mufessir)} thumbnail" class="mufessir-thumbnail">
-                    <div class="mufessir-card-info">
-                        <h3>${escapeHTML(mufessirData.mufessir)}</h3>
-                        <p>Video Sayısı: ${escapeHTML(videoCount)}</p>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        if (selectedMufessirFromUrl) {
+            surelerGrid.classList.add('hidden');
             mufessirGridForSure.classList.add('hidden');
             videoDetayDiv.classList.remove('hidden');
             displayVideosForSureAndMufessir(selectedSure, selectedMufessirFromUrl);
+        } else {
+            pageTitle.textContent = `${escapeHTML(selectedSure)} Suresi`;
+            surelerGrid.classList.add('hidden');
+            mufessirGridForSure.classList.remove('hidden');
+            videoDetayDiv.classList.add('hidden');
+
+            const mufessirlerForSure = [];
+            allData.filter(item => item.standart_sure_ad === selectedSure).forEach(video => {
+                if (video.mufessir && !mufessirlerForSure.some(m => m.mufessir === video.mufessir)) {
+                    mufessirlerForSure.push({
+                        mufessir: video.mufessir,
+                        thumbnail: getThumbnailUrl(video.youtube_video_id)
+                    });
+                }
+            });
+
+            mufessirlerForSure.sort((a, b) => a.mufessir.localeCompare(b.mufessir, 'tr', { sensitivity: 'base' }));
+
+            mufessirGridForSure.innerHTML = mufessirlerForSure.map(mufessirData => {
+                const videoCount = mufessirSureVideoCounts[mufessirData.mufessir]?.[selectedSure] || 0;
+                return createMufessirCardHTML(
+                    mufessirData, 
+                    videoCount, 
+                    `sureler.html?sure=${encodeURIComponent(selectedSure)}&mufessir=${encodeURIComponent(mufessirData.mufessir)}`
+                );
+            }).join('');
         }
     } else {
         surelerGrid.classList.remove('hidden');
@@ -350,7 +401,11 @@ function displayVideosForSureAndMufessir(sureAd, mufessirAd) {
 
         ilgiliVideolarListesi.innerHTML = '<h3>İlgili Videolar</h3>' + videos.map(video => `
             <div class="video-item" data-video-id="${video.youtube_video_id}">
-                <img src="${escapeHTML(video.video_thumbnail_url || 'img/placeholder-video.jpg')}" alt="${escapeHTML(video.video_baslik)}">
+                <img src="${getThumbnailUrl(video.youtube_video_id)}" 
+                     alt="${escapeHTML(video.video_baslik)}" 
+                     class="video-thumbnail" 
+                     onerror="handleThumbnailError(this, '${video.youtube_video_id}')"
+                     loading="lazy">
                 <div class="video-item-info">
                     <h4>${escapeHTML(video.video_baslik)}</h4>
                     <p>${escapeHTML(video.mufessir)}</p>
@@ -410,7 +465,7 @@ function playVideo(videoData, playerElement, titleElement, videoListContainer, d
 
             if (titleElement) titleElement.textContent = escapeHTML(videoData.video_baslik || 'Video Başlığı Bulunamadı');
             if (descriptionElement) {
-                descriptionElement.textContent = videoData.video_aciklama || 'Açıklama bulunamadı.'; // innerHTML yerine textContent
+                descriptionElement.textContent = videoData.video_aciklama || 'Açıklama bulunamadı.';
             }
 
             const tagsContainer = document.getElementById(tagsContainerId);
@@ -573,15 +628,11 @@ function renderMufessirlerPage() {
 
         mufessirlerGrid.innerHTML = cachedMufessirler.map(mufessirData => {
             const totalMufessirVideos = Object.values(mufessirSureVideoCounts[mufessirData.mufessir] || {}).reduce((sum, count) => sum + count, 0);
-            return `
-                <div class="card mufessir-card" onclick="window.location.href='mufessirler.html?mufessir=${encodeURIComponent(mufessirData.mufessir)}'">
-                    <img src="${escapeHTML(mufessirData.thumbnail)}" class="mufessir-thumbnail" alt="${escapeHTML(mufessirData.mufessir)}">
-                    <div class="mufessir-card-info">
-                        <h3>${escapeHTML(mufessirData.mufessir)}</h3>
-                        <p>Toplam Video: ${escapeHTML(totalMufessirVideos)}</p>
-                    </div>
-                </div>
-            `;
+            return createMufessirCardHTML(
+                mufessirData, 
+                totalMufessirVideos, 
+                `mufessirler.html?mufessir=${encodeURIComponent(mufessirData.mufessir)}`
+            );
         }).join('');
     }
 }
@@ -606,7 +657,11 @@ function displayVideosForMufessirAndSure(mufessirAd, sureAd) {
 
         mufessirIlgiliVideolarListesi.innerHTML = '<h3>İlgili Videolar</h3>' + videos.map(video => `
             <div class="video-item" data-video-id="${video.youtube_video_id}">
-                <img src="${escapeHTML(video.video_thumbnail_url || 'img/placeholder-video.jpg')}" alt="${escapeHTML(video.video_baslik)}">
+                <img src="${getThumbnailUrl(video.youtube_video_id)}" 
+                     alt="${escapeHTML(video.video_baslik)}" 
+                     class="video-thumbnail" 
+                     onerror="handleThumbnailError(this, '${video.youtube_video_id}')"
+                     loading="lazy">
                 <div class="video-item-info">
                     <h4>${escapeHTML(video.video_baslik)}</h4>
                     <p>${escapeHTML(video.mufessir)}</p>
@@ -691,15 +746,11 @@ function renderMufessirlerInHome() {
 
     grid.innerHTML = cachedMufessirler.map(mufessirData => {
         const totalMufessirVideos = Object.values(mufessirSureVideoCounts[mufessirData.mufessir] || {}).reduce((sum, count) => sum + count, 0);
-        return `
-            <div class="card mufessir-card" onclick="window.location.href='mufessirler.html?mufessir=${encodeURIComponent(mufessirData.mufessir)}'">
-                <img src="${escapeHTML(mufessirData.thumbnail)}" class="mufessir-thumbnail" alt="${escapeHTML(mufessirData.mufessir)}">
-                <div class="mufessir-card-info">
-                    <h3>${escapeHTML(mufessirData.mufessir)}</h3>
-                    <p>Toplam Video: ${escapeHTML(totalMufessirVideos)}</p>
-                </div>
-            </div>
-        `;
+        return createMufessirCardHTML(
+            mufessirData, 
+            totalMufessirVideos, 
+            `mufessirler.html?mufessir=${encodeURIComponent(mufessirData.mufessir)}`
+        );
     }).join('');
 }
 

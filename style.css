@@ -200,13 +200,23 @@ main {
     text-align: center;
 }
 
-.mufessir-thumbnail {
+.mufessir-thumbnail, .video-thumbnail {
     width: 100px;
     height: 100px;
     border-radius: 50%;
     object-fit: cover;
     margin-bottom: 10px;
 }
+
+/* .mufessir-thumbnail, .video-thumbnail {
+    width: 100%;
+    max-width: 200px;
+    height: auto;
+    aspect-ratio: 16/9; /* YouTube thumbnail oranı */
+    /* object-fit: cover;
+    border-radius: 8px;
+} */
+
 
 .mufessir-card-info h3 {
     margin: 0;
