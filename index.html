@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kur'an Tefsirleri</title>
+    <meta http-equiv="Content-Security-Policy" content="frame-src 'self' https://www.youtube.com https://youtube.com">
     <link rel="stylesheet" href="style.css?v=1">
     <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet"> <!-- Arapça font -->
 </head>
@@ -52,11 +53,14 @@
     </div>
 </footer>
 
-<script src="script.js?v=1"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => document.getElementById('show-sureler')?.click(), 500);
-    });
-</script>
+    <!-- Load YouTube IFrame API first -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <!-- Then load your script -->
+    <script src="script.js?v=1"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => document.getElementById('show-sureler')?.click(), 500);
+        });
+    </script>
 </body>
 </html>
